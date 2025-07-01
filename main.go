@@ -1,11 +1,16 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"math/rand"
 	"net/http"
 	"os"
+	"strings"
 )
+
+const VERSION = 1.0
 
 func main() {
 	showIntro()
@@ -17,8 +22,7 @@ func main() {
 }
 
 func showIntro() {
-	version := 1.0
-	fmt.Printf("Introduction to Golang version %f\n", version)
+	fmt.Printf("Introduction to Golang version %f\n", VERSION)
 }
 
 func showMenu() {
@@ -65,11 +69,23 @@ func randomStatusCode() int {
 
 func startMonitoring() {
 	fmt.Println("Monitoring ...")
-	chosenOption := showAvailableWebsites()
-	fmt.Println("Chosen website:", chosenOption)
+	fmt.Println("Read from file (Y/N)")
+	var option string
+	fmt.Scan(&option)
 
-	mockUrl := fmt.Sprintf("https://httpbin.org/status/%d", randomStatusCode())
-	response, _ := http.Get(mockUrl)
+	var chosenWebsite string
+	if strings.ToLower(option) == "y" {
+		chosenWebsite = showitesFromFile()
+	} else {
+		chosenWebsite = showAvailableWebsites()
+		fmt.Println("Chosen website:", chosenWebsite)
+	}
+
+	fmt.Println(chosenWebsite)
+	response, error := http.Get(chosenWebsite)
+	if error != nil {
+		fmt.Println("Error to request.")
+	}
 
 	if response.StatusCode == 200 {
 		fmt.Println("Loaded with success")
@@ -80,15 +96,43 @@ func startMonitoring() {
 
 func showAvailableWebsites() string {
 	sites := []string{
-		"www.testing.com",
-		"www.testing-again.com",
-		"www.last-testing.com",
+		fmt.Sprintf("https://httpbin.org/status/%d", randomStatusCode()),
+		fmt.Sprintf("https://httpbin.org/status/%d", randomStatusCode()),
+		fmt.Sprintf("https://httpbin.org/status/%d", randomStatusCode()),
 	}
 
+	return chooseAvailableWesites(sites)
+}
+
+func showitesFromFile() string {
+	var sites []string
+
+	file, error := os.Open("sites.txt")
+	if error != nil {
+		fmt.Println("File not found.")
+	}
+
+	reader := bufio.NewReader(file)
+	for {
+		line, error := reader.ReadString('\n')
+		sites = append(sites, strings.TrimSpace(line))
+
+		if error == io.EOF {
+			break
+		}
+	}
+
+	file.Close()
+
+	return chooseAvailableWesites(sites)
+}
+
+func chooseAvailableWesites(sites []string) string {
 	fmt.Println("Available websites:")
 	for i, v := range sites {
 		fmt.Println("Option[", i, "] - ", v)
 	}
+
 	var option int
 	fmt.Scan(&option)
 
